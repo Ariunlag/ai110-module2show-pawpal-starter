@@ -2,6 +2,12 @@
 
 ## 1. System Design
 
+**Core user actions**
+
+- Add and manage pet profile information (for example pet name, type, and care notes).
+- Create, edit, and prioritize care tasks (like feeding, walks, medication, and grooming) with duration.
+- Generate and view today’s schedule so tasks are ordered based on available time and priority.
+
 **a. Initial design**
 
 - Briefly describe your initial UML design.
