@@ -32,6 +32,27 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+## Testing PawPal+
+
+Run the test suite with:
+
+```bash
+python -m pytest
+```
+
+Current tests cover:
+
+- **Sorting**: verifies tasks are ordered correctly by `HH:MM` time.
+- **Filtering**: verifies completed vs pending task subsets are accurate.
+- **Recurring tasks**: verifies daily completion creates the next-day task while preserving history.
+- **Conflict detection**: verifies same-time tasks produce conflict warnings.
+
+These tests matter because they validate core scheduler behavior, reduce regression risk, and ensure task planning output stays predictable as features evolve.
+
+**Confidence Level:** ★★★★☆ (4/5)
+
+The core scheduling paths are well-covered, but confidence is not 5/5 yet because advanced overlap logic and invalid-time validation are still limited.
+
 ### Suggested workflow
 
 1. Read the scenario carefully and identify requirements and edge cases.

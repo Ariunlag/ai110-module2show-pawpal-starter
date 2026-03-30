@@ -5,6 +5,7 @@ Tests core functionality of Task, Pet, Owner, and Scheduler classes.
 """
 
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -345,3 +346,86 @@ class TestScheduler:
         assert task1 in grouped["Buddy"]
         assert task2 in grouped["Buddy"]
         assert task3 in grouped["Luna"]
+
+    def test_scheduler_sort_tasks_by_time(self):
+        """Test that sort_tasks_by_time() returns tasks in chronological HH:MM order."""
+        owner = Owner("Nora")
+        scheduler = Scheduler(owner)
+
+        task1 = Task("Vet", "17:30", frequency="once")
+        task2 = Task("Feed", "08:00", frequency="daily")
+        task3 = Task("Walk", "12:15", frequency="daily")
+
+        unsorted_tasks = [task1, task2, task3]
+        sorted_tasks = scheduler.sort_tasks_by_time(unsorted_tasks)
+
+        assert [task.scheduled_time for task in sorted_tasks] == ["08:00", "12:15", "17:30"]
+
+    def test_scheduler_handle_task_completion_daily_creates_next_task(self):
+        """Test that completing a daily task creates a next-day recurring task."""
+        owner = Owner("Omar")
+        pet = Pet("Buddy", "Dog")
+        owner.add_pet(pet)
+        scheduler = Scheduler(owner)
+
+        original_task = Task("Morning Walk", "07:00", frequency="daily")
+        pet.add_task(original_task)
+
+        scheduler.handle_task_completion(original_task)
+        tasks = pet.get_tasks()
+
+        assert original_task.completed is True
+        assert len(tasks) == 2
+
+        new_tasks = [task for task in tasks if task is not original_task]
+        assert len(new_tasks) == 1
+        next_task = new_tasks[0]
+        assert next_task.frequency == "daily"
+        assert next_task.scheduled_time == original_task.scheduled_time
+        assert next_task.scheduled_date == original_task.scheduled_date + timedelta(days=1)
+        assert next_task.completed is False
+
+    def test_scheduler_detect_conflicts_same_time_tasks(self):
+        """Test that detect_conflicts() reports warnings for tasks scheduled at the same time."""
+        owner = Owner("Pia")
+        scheduler = Scheduler(owner)
+
+        task1 = Task("Feed", "12:00", frequency="daily")
+        task2 = Task("Walk", "12:00", frequency="daily")
+        task3 = Task("Play", "13:00", frequency="daily")
+
+        conflicts = scheduler.detect_conflicts([task1, task2, task3])
+
+        assert conflicts
+        assert any(
+            "both scheduled at 12:00" in warning and "Feed" in warning and "Walk" in warning
+            for warning in conflicts
+        )
+
+    def test_scheduler_filter_tasks_by_status(self):
+        """Test that filter_tasks_by_status() returns correct completed and pending subsets."""
+        owner = Owner("Quinn")
+        scheduler = Scheduler(owner)
+
+        done_task = Task("Feed", "09:00", frequency="daily", completed=True)
+        pending_task_1 = Task("Walk", "10:00", frequency="daily", completed=False)
+        pending_task_2 = Task("Play", "16:00", frequency="daily", completed=False)
+        tasks = [done_task, pending_task_1, pending_task_2]
+
+        completed_tasks = scheduler.filter_tasks_by_status(tasks, completed=True)
+        pending_tasks = scheduler.filter_tasks_by_status(tasks, completed=False)
+
+        assert completed_tasks == [done_task]
+        assert pending_tasks == [pending_task_1, pending_task_2]
+
+    def test_scheduler_edge_case_pet_with_no_tasks(self):
+        """Test that a pet with no tasks returns empty results without errors."""
+        owner = Owner("Rae")
+        empty_pet = Pet("Luna", "Cat")
+        owner.add_pet(empty_pet)
+        scheduler = Scheduler(owner)
+
+        assert empty_pet.get_tasks() == []
+        assert empty_pet.get_due_tasks("12:00") == []
+        assert scheduler.filter_tasks_by_pet("Luna") == []
+        assert scheduler.get_daily_schedule("12:00") == {}
